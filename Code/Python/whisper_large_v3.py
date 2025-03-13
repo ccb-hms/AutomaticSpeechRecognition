@@ -5,6 +5,9 @@
 # conda create -n asr python=3.12.7
 # conda activate asr
 #
+# For Apple Silicon MPS devices, use this instead of conda install pytorch... below:
+# pip3 install --pre torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+#
 # conda install transformers
 # conda install -c conda-forge accelerate
 # conda install -c huggingface -c conda-forge datasets
@@ -21,7 +24,8 @@ import time
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
 from datasets import load_dataset
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+# Select the appropriate device (MPS for Mac, CUDA for NVIDIA GPUs, or CPU)
+device = torch.device("cuda:0" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
 
 model_id = "openai/whisper-large-v3"
@@ -46,7 +50,14 @@ dataset = load_dataset("distil-whisper/librispeech_long", "clean", split="valida
 sample = dataset[0]["audio"]
 
 audio_input = {"raw": sample["array"], "sampling_rate": sample["sampling_rate"]}
+
+# time it:
+start_time = time.time()
 result = pipe(audio_input, return_timestamps=True)
+end_time = time.time()
+
+elapsed_time = end_time - start_time
+print(f"Execution time: {elapsed_time:.4f} seconds")
 
 # an example of transcribing from a file (accepts mp3 or flac only)
 # for i in range(60):
